@@ -21,7 +21,7 @@ const pool = new Pool({
 // Middleware
 app.use(cors({
   origin: [
-    'https://your-render-frontend.onrender.com',
+    'https://lks-translation-frontend.onrender.com',
     'http://localhost:3000'
   ],
   credentials: true
