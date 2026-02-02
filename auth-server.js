@@ -12,7 +12,7 @@ const SECRET_KEY = process.env.VITE_RENDER_AUTH_API_KEY || 'your-secret-key-chan
 
 // PostgreSQL connection pool
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL || 'postgresql://localhost:5432/lks_auth',
+  connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL || 'postgresql://lks_translation_user:GveKC3YAYidizrPdgGkXE1AvQW1f5OT1@dpg-d5s9mnffte5s73co24ag-a.virginia-postgres.render.com/lks_translation',
   ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: false
   } : false
@@ -104,7 +104,10 @@ app.post('/api/auth/login', async (req, res) => {
     const user = userResult.rows[0];
     
     // Verify password
+    console.log('Comparing password for user:', user.email);
+    console.log('Stored hash:', user.password_hash);
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    console.log('Password valid:', isValidPassword);
     if (!isValidPassword) {
       return res.status(401).json({ 
         error: 'Invalid email or password' 
@@ -304,14 +307,40 @@ app.post('/api/auth/verify', async (req, res) => {
   }
 });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date() });
+// Debug endpoint to check user data (REMOVE IN PRODUCTION)
+app.get('/api/debug/users', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, email, password_hash FROM users');
+    res.json({ users: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Health check endpoint with database test
+app.get('/api/health', async (req, res) => {
+  try {
+    // Test database connection
+    const result = await pool.query('SELECT NOW()');
+    res.json({ 
+      status: 'OK', 
+      timestamp: new Date(),
+      db: 'Connected',
+      db_time: result.rows[0].now
+    });
+  } catch (error) {
+    res.json({ 
+      status: 'OK', 
+      timestamp: new Date(),
+      db: 'Error',
+      db_error: error.message
+    });
+  }
 });
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Authentication server running on port ${PORT}`);
+  console.log(`Authentication server running on port ${PORT} - v2`);
   console.log(`Access URLs:`);
   console.log(`- Login: http://localhost:${PORT}/api/auth/login`);
   console.log(`- Register: http://localhost:${PORT}/api/auth/register`);
